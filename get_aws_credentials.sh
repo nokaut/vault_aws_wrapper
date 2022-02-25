@@ -74,7 +74,7 @@ if [ -f "$LOCK_FILE" ]; then
       echo " $timediff > $lease_duration " > $SESSION_RELEASE_FILE
       TOKEN_ACTIVE=1
   else
-      rm $LOCK_FILE $SESSION_RELEASE_FILE $CREDENTIALS
+      rm -f $LOCK_FILE $SESSION_RELEASE_FILE $CREDENTIALS
   fi
 fi
 
