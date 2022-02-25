@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Add to .aws/config config:
 #
@@ -10,13 +10,24 @@
 # region=eu-west-1
 # credential_process=/usr/local/bin/get_aws_credentials.sh --vault_aws_profile roleprofile --vault_aws_role administrator --arn_role arn:aws:iam::111111111111:role/admin
 
+# We have to use different date binary for MacOS
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    DATE=$(which gdate)
+    STATUS=$?
+    if [ $STATUS -gt 0 ]; then
+        printf "Probably missing gdate binary.\nPlease install it with brew.\n"
+        exit 1
+    fi
+else
+    DATE=$(which date)
+fi
 
-LOCK_FILE=/tmp/vault_file_session.lock
-CREDENTIALS=/tmp/vault_file_session.session
+VAULT_SESSION_DIR="${HOME}/.vault_sessions"
+LOCK_FILE="${VAULT_SESSION_DIR}/vault_file_session.lock"
+CREDENTIALS="${VAULT_SESSION_DIR}/vault_file_session.session"
 TOKEN_ACTIVE=0
 VAULT_AWS_PROFILE=''
 VAULT_AWS_ROLE=''
-VAULT_SESSION_DIR=/tmp
 DURATION_SECONDS=900
 
 parse_args() {
@@ -48,6 +59,9 @@ while [[ "$#" -ge 2 ]]; do
     shift; shift
 done
 
+# Prepare directory for vault sessions
+mkdir -p ${VAULT_SESSION_DIR} && chmod 700 ${VAULT_SESSION_DIR}
+
 LOCK_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.lock
 SESSION_RELEASE_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.release
 CREDENTIALS=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.session
@@ -55,19 +69,19 @@ CREDENTIALS=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_se
 if [ -f "$LOCK_FILE" ]; then
   starttime=$(tail -n 1 $LOCK_FILE)
   lease_duration=$(head -n 1 $LOCK_FILE)
-  timediff=$(($(date +"%s")-$starttime))
+  timediff=$(($(${DATE} +"%s")-$starttime))
   if (( $timediff < $lease_duration )); then
       echo " $timediff > $lease_duration " > $SESSION_RELEASE_FILE
       TOKEN_ACTIVE=1
   else
-      rm $LOCK_FILE $SESSION_RELEASE_FILE $CREDENTIALS
+      rm -f $LOCK_FILE $SESSION_RELEASE_FILE $CREDENTIALS
   fi
 fi
 
 if [ $TOKEN_ACTIVE -eq 0 ]; then
   json_result=$(vault read ${VAULT_AWS_PROFILE}/creds/${VAULT_AWS_ROLE} -format=json)
   echo $(echo $json_result | jq -r ".lease_duration") > $LOCK_FILE
-  echo $(date +"%s") >> ${LOCK_FILE}
+  echo $(${DATE} +"%s") >> ${LOCK_FILE}
   export AWS_ACCESS_KEY_ID=$( echo $json_result | jq -r ".data.access_key")
   export AWS_SECRET_ACCESS_KEY=$( echo $json_result | jq -r ".data.secret_key")
   sleep 10
@@ -83,10 +97,10 @@ if [ $TOKEN_ACTIVE -eq 0 ]; then
     AWS_SESSION_TOKEN=$(echo ${STS_RESULT} | jq -r ".Credentials.SessionToken")
     AWS_EXPIRATION_TOKEN=$(echo ${STS_RESULT} | jq -r ".Credentials.Expiration")
 
-    AWS_EXPIRATION_TOKEN_SEC=$(date --utc -d"${AWS_EXPIRATION_TOKEN}" +%s)
-    AWS_EXPIRATION_TOKEN_SEC_DIFF=$(($AWS_EXPIRATION_TOKEN_SEC-$(date --utc +"%s")))
+    AWS_EXPIRATION_TOKEN_SEC=$(${DATE} --utc -d"${AWS_EXPIRATION_TOKEN}" +%s)
+    AWS_EXPIRATION_TOKEN_SEC_DIFF=$(($AWS_EXPIRATION_TOKEN_SEC-$(${DATE} --utc +"%s")))
     echo ${AWS_EXPIRATION_TOKEN_SEC_DIFF} > $LOCK_FILE
-    echo $(date +"%s") >> ${LOCK_FILE}
+    echo $(${DATE} +"%s") >> ${LOCK_FILE}
     echo '{ "Version": 1, "AccessKeyId": "'"${AWS_ACCESS_KEY_ID}"'", "SecretAccessKey": "'"${AWS_SECRET_ACCESS_KEY}"'", "SessionToken": "'"${AWS_SESSION_TOKEN}"'", "Expiration": "'"${AWS_EXPIRATION_TOKEN}"'" }' > $CREDENTIALS
   fi
   chmod 600 $CREDENTIALS
@@ -94,4 +108,3 @@ if [ $TOKEN_ACTIVE -eq 0 ]; then
 fi
 
 cat $CREDENTIALS
-
