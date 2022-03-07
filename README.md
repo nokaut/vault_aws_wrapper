@@ -4,6 +4,6 @@
 
 Script to get AWS credentials via Hashicorp Vault
 
-## awslauchconsole.py
+## awslaunchconsole.py
 
 Call AWS console from terminal
