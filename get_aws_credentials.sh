@@ -22,6 +22,14 @@ else
     DATE=$(which date)
 fi
 
+# Check valid vault token
+vault token lookup &>/dev/null
+EXITCODE=$?
+if [ $EXITCODE -eq 2 ]; then
+    echo -e "\n You need to auth in vault. Try to run command:\n vault login -method=ldap username=**** \n"
+    exit $EXITCODE
+fi
+
 VAULT_SESSION_DIR="${HOME}/.vault_sessions"
 LOCK_FILE="${VAULT_SESSION_DIR}/vault_file_session.lock"
 CREDENTIALS="${VAULT_SESSION_DIR}/vault_file_session.session"
