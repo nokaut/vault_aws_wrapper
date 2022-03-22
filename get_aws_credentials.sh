@@ -15,7 +15,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     DATE=$(which gdate)
     STATUS=$?
     if [ $STATUS -gt 0 ]; then
-        printf "Probably missing gdate binary.\nPlease install it with brew.\n"
+        printf "Probably missing gdate binary.\nPlease install it with brew.\n" 1>&2
         exit 1
     fi
 else
@@ -26,13 +26,17 @@ fi
 vault token lookup &>/dev/null
 EXITCODE=$?
 if [ $EXITCODE -eq 2 ]; then
-    echo -e "\n You need to auth in vault. Try to run command:\n vault login -method=ldap username=**** \n"
+    printf "\n You need to auth in vault. Try to run command:\n vault login -method=ldap username=**** \n" 1>&2
     exit $EXITCODE
 fi
 
 VAULT_SESSION_DIR="${HOME}/.vault_sessions"
-LOCK_FILE="${VAULT_SESSION_DIR}/vault_file_session.lock"
-CREDENTIALS="${VAULT_SESSION_DIR}/vault_file_session.session"
+# Prepare directory for vault sessions
+mkdir -p ${VAULT_SESSION_DIR} && chmod 700 ${VAULT_SESSION_DIR}
+
+LOCK_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.lock
+CREDENTIALS=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.session
+SESSION_RELEASE_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.release
 TOKEN_ACTIVE=0
 VAULT_AWS_PROFILE=''
 VAULT_AWS_ROLE=''
@@ -67,12 +71,10 @@ while [[ "$#" -ge 2 ]]; do
     shift; shift
 done
 
-# Prepare directory for vault sessions
-mkdir -p ${VAULT_SESSION_DIR} && chmod 700 ${VAULT_SESSION_DIR}
-
-LOCK_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.lock
-SESSION_RELEASE_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.release
-CREDENTIALS=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.session
+if [ ! -f "$CREDENTIALS" ]; then
+    rm $LOCK_FILE
+    rm $SESSION_RELEASE_FILE
+fi
 
 if [ -f "$LOCK_FILE" ]; then
   starttime=$(tail -n 1 $LOCK_FILE)
