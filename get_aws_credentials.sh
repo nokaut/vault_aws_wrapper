@@ -15,7 +15,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     DATE=$(which gdate)
     STATUS=$?
     if [ $STATUS -gt 0 ]; then
-        printf "Probably missing gdate binary.\nPlease install it with brew.\n" 1>&2
+        printf "Probably missing gdate binary from coreutils package.\nPlease install coreutils with brew.\n" 1>&2
         exit 1
     fi
 else
