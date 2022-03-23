@@ -34,9 +34,6 @@ VAULT_SESSION_DIR="${HOME}/.vault_sessions"
 # Prepare directory for vault sessions
 mkdir -p ${VAULT_SESSION_DIR} && chmod 700 ${VAULT_SESSION_DIR}
 
-LOCK_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.lock
-CREDENTIALS=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.session
-SESSION_RELEASE_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.release
 TOKEN_ACTIVE=0
 VAULT_AWS_PROFILE=''
 VAULT_AWS_ROLE=''
@@ -70,6 +67,10 @@ while [[ "$#" -ge 2 ]]; do
     parse_args "$1" "$2"
     shift; shift
 done
+
+LOCK_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.lock
+CREDENTIALS=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.session
+SESSION_RELEASE_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.release
 
 if [ ! -f "$CREDENTIALS" ]; then
     rm $LOCK_FILE
