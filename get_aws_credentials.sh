@@ -56,6 +56,9 @@ parse_args() {
         --duration_seconds)
             DURATION_SECONDS="$2"
             ;;
+        --export_credentials)
+            EXPORT_CREDENTIALS=True
+            ;;
         *)
             echo "Unknown or badly placed parameter '$1'." 1>&2
             exit 1
@@ -73,8 +76,8 @@ CREDENTIALS=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_se
 SESSION_RELEASE_FILE=${VAULT_SESSION_DIR}/vault_${VAULT_AWS_PROFILE}_${VAULT_AWS_ROLE}_session.release
 
 if [ ! -f "$CREDENTIALS" ]; then
-    rm $LOCK_FILE
-    rm $SESSION_RELEASE_FILE
+    rm -f $LOCK_FILE
+    rm -f $SESSION_RELEASE_FILE
 fi
 
 if [ -f "$LOCK_FILE" ]; then
@@ -118,4 +121,13 @@ if [ $TOKEN_ACTIVE -eq 0 ]; then
   sleep 5
 fi
 
-cat $CREDENTIALS
+if [ -z $EXPORT_CREDENTIALS ];
+then
+  cat $CREDENTIALS
+else
+  CREDENTIALS_FROM_CACHE=$(cat $CREDENTIALS)
+  export AWS_ACCESS_KEY_ID=$( echo $CREDENTIALS_FROM_CACHE | jq -r ".AccessKeyId")
+  export AWS_SECRET_ACCESS_KEY=$( echo $CREDENTIALS_FROM_CACHE | jq -r ".SecretAccessKey")
+  export AWS_SESSION_TOKEN=$(echo $CREDENTIALS_FROM_CACHE | jq -r ".SessionToken")
+  # echo 'AWS_ACCESS_KEY_ID="'"${AWS_ACCESS_KEY_ID}"'" AWS_SESSION_TOKEN="'"${AWS_SESSION_TOKEN}"'" AWS_SECRET_ACCESS_KEY="'"${AWS_SECRET_ACCESS_KEY}"'" '
+fi
