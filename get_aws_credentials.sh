@@ -129,5 +129,6 @@ else
   export AWS_ACCESS_KEY_ID=$( echo $CREDENTIALS_FROM_CACHE | jq -r ".AccessKeyId")
   export AWS_SECRET_ACCESS_KEY=$( echo $CREDENTIALS_FROM_CACHE | jq -r ".SecretAccessKey")
   export AWS_SESSION_TOKEN=$(echo $CREDENTIALS_FROM_CACHE | jq -r ".SessionToken")
+  export AWS_SECURITY_TOKEN=$(echo $CREDENTIALS_FROM_CACHE | jq -r ".SessionToken")
   # echo 'AWS_ACCESS_KEY_ID="'"${AWS_ACCESS_KEY_ID}"'" AWS_SESSION_TOKEN="'"${AWS_SESSION_TOKEN}"'" AWS_SECRET_ACCESS_KEY="'"${AWS_SECRET_ACCESS_KEY}"'" '
 fi
